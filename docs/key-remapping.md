@@ -101,8 +101,10 @@ key-presses.
 F5 = { type = "hotp", profile = "vpn" }
 ```
 
-The counter is incremented automatically and persisted to
-`/var/lib/cyberdeck/hotp_counters.toml` after each use.
+> **Note:** HOTP counter management is not yet automated. After each use you
+> must manually increment the `counter` value in `/etc/cyberdeck/otp.toml` and
+> restart the daemon. Automatic counter persistence is planned for a future
+> release.
 
 ---
 

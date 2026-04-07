@@ -67,7 +67,8 @@ ln -sf functions/hid.usb0 configs/c.1/
 # --- Function: CDC-ECM Ethernet -----------------------------------------------
 mkdir -p functions/ecm.usb0
 
-# Generate a stable MAC pair from the serial number.
+# Static MAC addresses. Change these if running multiple Pi cyberdecks on the
+# same host to avoid conflicts.
 HOST_MAC="48:6f:73:74:50:43"   # "HostPC"
 DEV_MAC="44:65:76:50:69:00"    # "DevPi\0"
 echo "${HOST_MAC}" > functions/ecm.usb0/host_addr

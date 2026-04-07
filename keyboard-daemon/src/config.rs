@@ -62,6 +62,7 @@ pub struct OtpProfile {
 
     /// `"totp"` or `"hotp"`.
     #[serde(rename = "type")]
+    #[allow(dead_code)] // Deserialized metadata; used by external tooling.
     pub otp_type: String,
 
     /// Base-32 encoded secret (no padding).

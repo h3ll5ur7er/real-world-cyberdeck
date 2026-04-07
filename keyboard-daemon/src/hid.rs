@@ -47,6 +47,7 @@ impl HidWriter {
     }
 
     /// Construct a HidWriter from an already-open [`File`] (useful for testing).
+    #[cfg(test)]
     pub fn from_file(file: File) -> Self {
         HidWriter {
             file,

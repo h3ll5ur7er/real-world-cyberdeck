@@ -25,6 +25,9 @@ pub fn generate_totp(
     digits: u32,
     algo: &str,
 ) -> Result<String, String> {
+    if period == 0 {
+        return Err("TOTP period must be > 0".to_string());
+    }
     let counter = time / period;
 
     let secret = BASE32_NOPAD
@@ -106,6 +109,12 @@ mod tests {
     #[test]
     fn test_totp_bad_secret() {
         let result = generate_totp("!!!invalid!!!", 59, 30, 6, "SHA1");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_totp_zero_period() {
+        let result = generate_totp(SECRET_SHA1_B32, 59, 0, 6, "SHA1");
         assert!(result.is_err());
     }
 }

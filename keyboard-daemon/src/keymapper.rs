@@ -31,7 +31,7 @@ pub struct KeyMapper {
     specials: HashMap<u16, SpecialAction>,
 
     /// Loaded OTP profiles (`None` if no OTP config file was found).
-    pub(crate) otp_config: Option<OtpConfig>,
+    otp_config: Option<OtpConfig>,
 }
 
 impl KeyMapper {
@@ -43,7 +43,10 @@ impl KeyMapper {
 
         let mut remap = HashMap::new();
         for (from, to) in &cfg.remap {
-            if let (Some(&fc), Some(&tc)) = (name_to_code.get(from), name_to_code.get(to)) {
+            let from_lc = from.to_lowercase();
+            let to_lc = to.to_lowercase();
+            if let (Some(&fc), Some(&tc)) = (name_to_code.get(&from_lc), name_to_code.get(&to_lc))
+            {
                 remap.insert(fc, tc);
             } else {
                 warn!("Remap: unknown key name {} or {}", from, to);
@@ -52,11 +55,11 @@ impl KeyMapper {
 
         let mut macros = HashMap::new();
         for (trigger, keys) in &cfg.macros {
-            if let Some(&tc) = name_to_code.get(trigger) {
+            if let Some(&tc) = name_to_code.get(&trigger.to_lowercase()) {
                 let codes: Vec<u16> = keys
                     .iter()
                     .filter_map(|k| {
-                        let c = name_to_code.get(k);
+                        let c = name_to_code.get(&k.to_lowercase());
                         if c.is_none() {
                             warn!("Macro: unknown key name {}", k);
                         }
@@ -71,7 +74,7 @@ impl KeyMapper {
 
         let mut specials = HashMap::new();
         for (trigger, action) in &cfg.special {
-            if let Some(&tc) = name_to_code.get(trigger) {
+            if let Some(&tc) = name_to_code.get(&trigger.to_lowercase()) {
                 specials.insert(tc, action.clone());
             } else {
                 warn!("Special: unknown trigger key {}", trigger);
@@ -96,8 +99,9 @@ impl KeyMapper {
         }
     }
 
-    /// Build a KeyMapper with an explicit OTP config (for testing).
-    #[cfg(test)]
+    /// Override the OTP configuration (builder pattern).
+    #[must_use]
+    #[allow(dead_code)] // Used in tests; available for external consumers.
     pub fn with_otp_config(mut self, otp: OtpConfig) -> Self {
         self.otp_config = Some(otp);
         self
@@ -195,7 +199,8 @@ impl KeyMapper {
 /// Build the mapping from human-readable key names to Linux evdev codes.
 ///
 /// Uses the standard values from `linux/input-event-codes.h`.
-pub fn build_name_to_code() -> HashMap<String, u16> {
+/// All names are stored in lowercase for case-insensitive matching.
+fn build_name_to_code() -> HashMap<String, u16> {
     let keys: &[(&str, u16)] = &[
         ("Escape", 1),
         ("1", 2),
@@ -297,7 +302,7 @@ pub fn build_name_to_code() -> HashMap<String, u16> {
         ("F24", 194),
     ];
 
-    keys.iter().map(|&(name, code)| (name.to_string(), code)).collect()
+    keys.iter().map(|&(name, code)| (name.to_lowercase(), code)).collect()
 }
 
 #[cfg(test)]
@@ -432,10 +437,7 @@ mod tests {
             },
         );
         let cfg = test_config(HashMap::new(), HashMap::new(), special);
-        let mut mapper = KeyMapper::new(&cfg);
-
-        // Inject an OTP config with a known profile.
-        mapper.otp_config = Some(OtpConfig {
+        let mapper = KeyMapper::new(&cfg).with_otp_config(OtpConfig {
             profiles: vec![crate::config::OtpProfile {
                 name: "test".into(),
                 otp_type: "totp".into(),
@@ -470,9 +472,7 @@ mod tests {
             },
         );
         let cfg = test_config(HashMap::new(), HashMap::new(), special);
-        let mut mapper = KeyMapper::new(&cfg);
-
-        mapper.otp_config = Some(OtpConfig {
+        let mapper = KeyMapper::new(&cfg).with_otp_config(OtpConfig {
             profiles: vec![crate::config::OtpProfile {
                 name: "test".into(),
                 otp_type: "hotp".into(),
@@ -499,13 +499,15 @@ mod tests {
     #[test]
     fn test_name_to_code_no_duplicates() {
         let m = build_name_to_code();
-        // Verify all important keys are present and unique.
-        assert_eq!(m.get("A"), Some(&30u16));
-        assert_eq!(m.get("Z"), Some(&44u16));
-        assert_eq!(m.get("J"), Some(&36u16));
-        assert_eq!(m.get("K"), Some(&37u16));
-        assert_eq!(m.get("I"), Some(&23u16));
+        // Keys are stored lowercase for case-insensitive matching.
+        assert_eq!(m.get("a"), Some(&30u16));
+        assert_eq!(m.get("z"), Some(&44u16));
+        assert_eq!(m.get("j"), Some(&36u16));
+        assert_eq!(m.get("k"), Some(&37u16));
+        assert_eq!(m.get("i"), Some(&23u16));
+        assert_eq!(m.get("capslock"), Some(&58u16));
+        assert_eq!(m.get("leftctrl"), Some(&29u16));
         // Ensure no bogus entries
-        assert!(m.get("I_dup").is_none());
+        assert!(m.get("i_dup").is_none());
     }
 }
