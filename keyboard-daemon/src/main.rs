@@ -7,7 +7,7 @@
 mod config;
 mod hid;
 mod keymapper;
-pub mod otp;
+mod otp;
 
 use clap::Parser;
 use log::{error, info};

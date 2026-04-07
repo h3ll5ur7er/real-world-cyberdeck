@@ -21,9 +21,6 @@ pub enum Action {
 
 /// Maps evdev key codes → actions using the loaded configuration.
 pub struct KeyMapper {
-    /// key-name → evdev code (reverse of EVDEV_NAMES).
-    name_to_code: HashMap<String, u16>,
-
     /// evdev code → remapped evdev code.
     remap: HashMap<u16, u16>,
 
@@ -33,15 +30,14 @@ pub struct KeyMapper {
     /// evdev code → special action descriptor.
     specials: HashMap<u16, SpecialAction>,
 
-    /// Loaded OTP profiles (lazy; `None` until first OTP use).
-    otp_config: Option<OtpConfig>,
-
-    /// Path to the OTP config file.
-    otp_config_path: String,
+    /// Loaded OTP profiles (`None` if no OTP config file was found).
+    pub(crate) otp_config: Option<OtpConfig>,
 }
 
 impl KeyMapper {
     /// Build a new mapper from the daemon configuration.
+    ///
+    /// Eagerly loads the OTP config from `cfg.otp_config` if the file exists.
     pub fn new(cfg: &Config) -> Self {
         let name_to_code = build_name_to_code();
 
@@ -82,14 +78,29 @@ impl KeyMapper {
             }
         }
 
+        // Eagerly load OTP config so special functions work at runtime.
+        let otp_config = OtpConfig::load(Path::new(&cfg.otp_config))
+            .map_err(|e| {
+                if !specials.is_empty() {
+                    warn!("Could not load OTP config {}: {}", cfg.otp_config, e);
+                }
+                e
+            })
+            .ok();
+
         KeyMapper {
-            name_to_code,
             remap,
             macros,
             specials,
-            otp_config: None,
-            otp_config_path: cfg.otp_config.clone(),
+            otp_config,
         }
+    }
+
+    /// Build a KeyMapper with an explicit OTP config (for testing).
+    #[cfg(test)]
+    pub fn with_otp_config(mut self, otp: OtpConfig) -> Self {
+        self.otp_config = Some(otp);
+        self
     }
 
     /// Translate an evdev key event into zero or more [`Action`]s.
@@ -140,10 +151,9 @@ impl KeyMapper {
 
     /// Execute a special action and return the resulting actions.
     fn handle_special(&self, action: &SpecialAction) -> Vec<Action> {
-        let otp_cfg = self.get_otp_config();
         match action {
             SpecialAction::Totp { profile } => {
-                if let Some(cfg) = otp_cfg.and_then(|c| c.find_profile(profile)) {
+                if let Some(cfg) = self.otp_config.as_ref().and_then(|c| c.find_profile(profile)) {
                     let now = SystemTime::now()
                         .duration_since(UNIX_EPOCH)
                         .unwrap_or_default()
@@ -163,7 +173,7 @@ impl KeyMapper {
                 }
             }
             SpecialAction::Hotp { profile } => {
-                if let Some(cfg) = otp_cfg.and_then(|c| c.find_profile(profile)) {
+                if let Some(cfg) = self.otp_config.as_ref().and_then(|c| c.find_profile(profile)) {
                     match otp::hotp::generate_hotp(&cfg.secret, cfg.counter, cfg.digits) {
                         Ok(code) => vec![Action::TypeString(code)],
                         Err(e) => {
@@ -178,45 +188,14 @@ impl KeyMapper {
             }
         }
     }
-
-    /// Lazily load the OTP config.
-    fn get_otp_config(&self) -> Option<&OtpConfig> {
-        // In production this would use interior mutability (OnceCell / Mutex).
-        // For now we try to load on each call if not cached.
-        // The caller holds &self so we return a reference to the Option.
-        if self.otp_config.is_some() {
-            return self.otp_config.as_ref();
-        }
-        // We cannot mutate self here; the runtime will load it once at
-        // construction if the file exists.  See `with_otp_config` below.
-        None
-    }
-
-    /// Construct a KeyMapper with pre-loaded OTP config (for testing / init).
-    pub fn with_otp_config(mut self, path: &Path) -> Self {
-        match OtpConfig::load(path) {
-            Ok(c) => self.otp_config = Some(c),
-            Err(e) => warn!("Could not load OTP config: {}", e),
-        }
-        self
-    }
 }
 
 // ── evdev key-name → code table ──────────────────────────────────────────────
 
 /// Build the mapping from human-readable key names to Linux evdev codes.
 ///
-/// This is a representative subset; extend as needed.
+/// Uses the standard values from `linux/input-event-codes.h`.
 pub fn build_name_to_code() -> HashMap<String, u16> {
-    let mut m = HashMap::new();
-    // Letters
-    for (i, c) in ('A'..='Z').enumerate() {
-        m.insert(c.to_string(), 30 + i as u16); // KEY_A = 30 .. KEY_Z = 55 (approx)
-    }
-    // Correct well-known evdev codes for the alphabet:
-    //   KEY_A=30, KEY_B=48, KEY_C=46, ... (QWERTY scan order)
-    // We'll use the standard Linux input-event-codes.h values.
-    m.clear();
     let keys: &[(&str, u16)] = &[
         ("Escape", 1),
         ("1", 2),
@@ -253,7 +232,6 @@ pub fn build_name_to_code() -> HashMap<String, u16> {
         ("F", 33),
         ("G", 34),
         ("H", 35),
-        ("I_dup", 36), // placeholder
         ("J", 36),
         ("K", 37),
         ("L", 38),
@@ -319,10 +297,7 @@ pub fn build_name_to_code() -> HashMap<String, u16> {
         ("F24", 194),
     ];
 
-    for &(name, code) in keys {
-        m.insert(name.to_string(), code);
-    }
-    m
+    keys.iter().map(|&(name, code)| (name.to_string(), code)).collect()
 }
 
 #[cfg(test)]
@@ -393,7 +368,8 @@ mod tests {
         let cfg = test_config(HashMap::new(), macros, HashMap::new());
         let mapper = KeyMapper::new(&cfg);
 
-        // F1 press → H press, H release, I press, I release
+        // F1 (59) press → H press, H release, I press, I release
+        // H = evdev 35, I = evdev 23
         let actions = mapper.translate(59, true);
         assert_eq!(actions.len(), 4);
         assert_eq!(
@@ -407,6 +383,20 @@ mod tests {
             actions[1],
             Action::Key {
                 code: 35,
+                pressed: false
+            }
+        );
+        assert_eq!(
+            actions[2],
+            Action::Key {
+                code: 23,
+                pressed: true
+            }
+        ); // I=23
+        assert_eq!(
+            actions[3],
+            Action::Key {
+                code: 23,
                 pressed: false
             }
         );
@@ -430,5 +420,92 @@ mod tests {
                 pressed: true
             }]
         );
+    }
+
+    #[test]
+    fn test_special_totp() {
+        let mut special = HashMap::new();
+        special.insert(
+            "F2".into(),
+            SpecialAction::Totp {
+                profile: "test".into(),
+            },
+        );
+        let cfg = test_config(HashMap::new(), HashMap::new(), special);
+        let mut mapper = KeyMapper::new(&cfg);
+
+        // Inject an OTP config with a known profile.
+        mapper.otp_config = Some(OtpConfig {
+            profiles: vec![crate::config::OtpProfile {
+                name: "test".into(),
+                otp_type: "totp".into(),
+                secret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ".into(),
+                digits: 6,
+                period: 30,
+                counter: 0,
+                algo: "SHA1".into(),
+            }],
+        });
+
+        // F2 (60) press → should produce a TypeString action
+        let actions = mapper.translate(60, true);
+        assert_eq!(actions.len(), 1);
+        match &actions[0] {
+            Action::TypeString(s) => assert_eq!(s.len(), 6),
+            other => panic!("Expected TypeString, got {:?}", other),
+        }
+
+        // F2 release → suppressed
+        let actions = mapper.translate(60, false);
+        assert!(actions.is_empty());
+    }
+
+    #[test]
+    fn test_special_hotp() {
+        let mut special = HashMap::new();
+        special.insert(
+            "F3".into(),
+            SpecialAction::Hotp {
+                profile: "test".into(),
+            },
+        );
+        let cfg = test_config(HashMap::new(), HashMap::new(), special);
+        let mut mapper = KeyMapper::new(&cfg);
+
+        mapper.otp_config = Some(OtpConfig {
+            profiles: vec![crate::config::OtpProfile {
+                name: "test".into(),
+                otp_type: "hotp".into(),
+                secret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ".into(),
+                digits: 6,
+                period: 30,
+                counter: 0,
+                algo: "SHA1".into(),
+            }],
+        });
+
+        let actions = mapper.translate(61, true); // F3 = 61
+        assert_eq!(actions.len(), 1);
+        match &actions[0] {
+            Action::TypeString(s) => {
+                assert_eq!(s.len(), 6);
+                // Counter=0 with the RFC4226 test secret should give "755224"
+                assert_eq!(s, "755224");
+            }
+            other => panic!("Expected TypeString, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_name_to_code_no_duplicates() {
+        let m = build_name_to_code();
+        // Verify all important keys are present and unique.
+        assert_eq!(m.get("A"), Some(&30u16));
+        assert_eq!(m.get("Z"), Some(&44u16));
+        assert_eq!(m.get("J"), Some(&36u16));
+        assert_eq!(m.get("K"), Some(&37u16));
+        assert_eq!(m.get("I"), Some(&23u16));
+        // Ensure no bogus entries
+        assert!(m.get("I_dup").is_none());
     }
 }
