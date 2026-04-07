@@ -33,8 +33,8 @@ cp target/release/cyberdeck-kbd "${INSTALL_DIR}/bin/"
 # ── 4. Install USB gadget scripts ───────────────────────────────────
 echo "==> Installing USB gadget scripts..."
 mkdir -p "${INSTALL_DIR}/usb-gadget"
-cp "${REPO_DIR}/usb-gadget/setup_gadget.sh"    "${INSTALL_DIR}/usb-gadget/"
-cp "${REPO_DIR}/usb-gadget/teardown_gadget.sh"  "${INSTALL_DIR}/usb-gadget/"
+cp "${REPO_DIR}/usb-gadget/setup_gadget.sh"   "${INSTALL_DIR}/usb-gadget/"
+cp "${REPO_DIR}/usb-gadget/teardown_gadget.sh" "${INSTALL_DIR}/usb-gadget/"
 chmod +x "${INSTALL_DIR}/usb-gadget/"*.sh
 
 # ── 5. Install configuration ────────────────────────────────────────

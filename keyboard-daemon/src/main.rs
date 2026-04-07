@@ -25,16 +25,16 @@ struct Args {
     config: PathBuf,
 }
 
-/// Size of a Linux `input_event` struct on a 64-bit system.
+/// Size of a Linux `input_event` struct on a 64-bit system (see linux/input.h).
 const INPUT_EVENT_SIZE: usize = 24;
 
-/// EV_KEY event type.
+/// EV_KEY event type (linux/input-event-codes.h).
 const EV_KEY: u16 = 0x01;
 
-/// Key press value.
+/// Key press value (linux/input-event-codes.h: value=1 means key down).
 const KEY_PRESS: i32 = 1;
 
-/// Key release value.
+/// Key release value (linux/input-event-codes.h: value=0 means key up).
 const KEY_RELEASE: i32 = 0;
 
 fn main() {
