@@ -1,0 +1,29 @@
+# Cyberdeck Keyboard Daemon – key-map configuration
+#
+# See docs/key-remapping.md for the full reference.
+
+# Path to the evdev keyboard device.
+keyboard_device = "/dev/input/by-id/usb-Raspberry_Pi_keyboard-event-kbd"
+
+# Path to the USB HID gadget device.
+hid_device = "/dev/hidg0"
+
+# Path to the OTP profile configuration.
+otp_config = "/etc/cyberdeck/otp.toml"
+
+# ── key → key remapping ──────────────────────────────────────────────
+[remap]
+# Example: remap Caps Lock to Left Control
+# CapsLock = "LeftCtrl"
+
+# ── key → macro ──────────────────────────────────────────────────────
+[macros]
+# Example: F1 types "Hello World" and presses Enter
+# F1 = ["H", "e", "l", "l", "o", "Space", "W", "o", "r", "l", "d", "Return"]
+
+# ── key → special function ───────────────────────────────────────────
+[special]
+# Example: F2 types current TOTP code for profile "github"
+# F2 = { type = "totp", profile = "github" }
+# Example: F3 types next HOTP code for profile "vpn"
+# F3 = { type = "hotp", profile = "vpn" }

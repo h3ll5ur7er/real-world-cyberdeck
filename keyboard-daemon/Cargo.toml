@@ -1,0 +1,20 @@
+[package]
+name = "cyberdeck-kbd"
+version = "0.1.0"
+edition = "2021"
+description = "Keyboard daemon for the real-world-cyberdeck (Raspberry Pi 500+)"
+license = "MIT"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+hmac = "0.12"
+sha1 = "0.10"
+sha2 = "0.10"
+data-encoding = "2.6"
+log = "0.4"
+env_logger = "0.11"
+clap = { version = "4", features = ["derive"] }
+
+[dev-dependencies]
+tempfile = "3"

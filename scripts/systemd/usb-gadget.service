@@ -1,0 +1,13 @@
+[Unit]
+Description=Cyberdeck USB Composite Gadget
+After=local-fs.target
+Wants=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/cyberdeck/usb-gadget/setup_gadget.sh
+ExecStop=/opt/cyberdeck/usb-gadget/teardown_gadget.sh
+
+[Install]
+WantedBy=multi-user.target
