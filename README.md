@@ -1,18 +1,38 @@
 # real-world-cyberdeck
 
-Set of tools to turn a Raspberry Pi 500+ into a real-world cyberdeck —
-a "keyboard on steroids" that presents itself as a USB composite device
-(HID keyboard + CDC-ECM Ethernet + mass storage) to any host computer.
+A secure, programmable USB keyboard appliance built on the Raspberry Pi 500+.
+
+When plugged into a host PC over USB-C, the Pi becomes a self-contained
+composite USB device providing a programmable HID keyboard, USB networking
+(SSH-over-USB), and file transfer — all controlled by a custom interception
+and event-processing layer. Secrets never leave the device.
 
 ## Features
+
+### Implemented
 
 - **USB composite device** via Linux ConfigFS gadget (HID keyboard, CDC-ECM
   Ethernet, mass storage)
 - **Key remapping** — remap any key to another key, a macro sequence, or a
   special function
-- **OTP type-out** — press a key to type a TOTP or HOTP code
+- **OTP type-out** — press a key to type a TOTP or HOTP code directly as
+  keystrokes
 - **Low-latency** — Rust-based keyboard daemon reads evdev events and writes
   HID reports directly
+- **TOML configuration** — all key mappings and OTP profiles defined in simple
+  config files
+
+### Planned
+
+- **Encrypted seed vault** — at-rest encryption for OTP secrets
+- **FIDO2 / WebAuthn** — hardware security key functionality via CTAP2
+- **Local management UI** — TUI or web UI for token management, key-mapping
+  editor, and event logs
+- **SSH-over-USB** — auto-configured RNDIS/ECM networking with setup guide
+- **Advanced macros** — mode switching, per-app profiles, dead-man timeouts,
+  LED/on-screen status indicators
+
+See [`docs/architecture.md`](docs/architecture.md) for the full roadmap.
 
 ## Repository layout
 
