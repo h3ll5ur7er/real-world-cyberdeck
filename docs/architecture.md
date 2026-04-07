@@ -199,7 +199,7 @@ counter = 0
 
 ### Phase 1 — Programmable HID keyboard ✅
 
-Implemented in this PR.
+Completed.
 
 | Feature                        | Status |
 |--------------------------------|--------|
