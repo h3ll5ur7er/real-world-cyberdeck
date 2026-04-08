@@ -24,9 +24,11 @@ services:
     volumes:
       - vaultwarden-data:/data   # persistent encrypted vault storage
     environment:
-      # Disable new user sign-ups after initial setup (security hardening).
-      # Set to "true" during first run, then change to "false".
-      SIGNUPS_ALLOWED: "true"
+      # Sign-ups are disabled by default. To create your initial account:
+      #   1. Change to "true" and run: docker compose up -d
+      #   2. Open http://localhost:8080 and register
+      #   3. Change back to "false" and run: docker compose up -d
+      SIGNUPS_ALLOWED: "false"
       # Disable public access — vault is only accessible from the Pi itself
       # or via SSH tunnel / USB network.
       DOMAIN: "http://localhost:8080"

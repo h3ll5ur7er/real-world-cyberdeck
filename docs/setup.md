@@ -156,24 +156,30 @@ daemon stays on the host — see [`docs/architecture.md`](architecture.md) §
 "Deployment strategy" for the rationale.
 
 ```bash
-# Install Docker (official convenience script)
+# Install Docker (official convenience script).
+# For a more cautious approach, download and review the script first:
+#   curl -fsSL https://get.docker.com -o get-docker.sh
+#   less get-docker.sh    # review before running
+#   sudo sh get-docker.sh
 curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker "$USER"
 # Log out and back in for group membership to take effect.
 
 # Start Vaultwarden
 cd real-world-cyberdeck
+
+# Enable sign-ups for initial account creation
+# In docker-compose.yml, temporarily set SIGNUPS_ALLOWED: "true"
 docker compose up -d
 
 # Open the web vault (from the Pi or via SSH tunnel)
 # http://localhost:8080
 ```
 
-After first login, disable new sign-ups for security:
+After creating your account, disable sign-ups:
 
 ```bash
-# In docker-compose.yml, set:
-#   SIGNUPS_ALLOWED: "false"
+# In docker-compose.yml, set SIGNUPS_ALLOWED back to "false"
 docker compose up -d   # recreates with new setting
 ```
 
