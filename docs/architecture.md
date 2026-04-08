@@ -186,7 +186,8 @@ counter = 0
 ## Security principles
 
 - **Secrets never leave the Pi.** OTP seeds are stored on-device, protected
-  by file permissions. A future encrypted vault will add at-rest encryption.
+  by file permissions. Future integration with an open-source password manager
+  (e.g. Passwork) will add encrypted at-rest storage.
 - **OTP codes are generated locally** and typed as synthetic keystrokes — they
   are never transmitted over a network.
 - **No mass-storage exposure of secrets.** The shared USB disk image is
@@ -218,7 +219,7 @@ Completed.
 | Feature                                           | Status  |
 |---------------------------------------------------|---------|
 | Automatic HOTP counter increment + persistence    | Planned |
-| Encrypted seed vault (at-rest encryption)         | Planned |
+| Integrate open-source password manager (e.g. Passwork) for seed storage | Planned |
 | Physical or shortcut-based trigger authorization   | Planned |
 
 ### Phase 3 — USB networking & mass storage workflows

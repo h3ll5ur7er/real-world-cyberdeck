@@ -24,7 +24,8 @@ and event-processing layer. Secrets never leave the device.
 
 ### Planned
 
-- **Encrypted seed vault** — at-rest encryption for OTP secrets
+- **Password manager integration** — integrate an open-source password manager
+  (e.g. Passwork) for encrypted OTP seed storage
 - **FIDO2 / WebAuthn** — hardware security key functionality via CTAP2
 - **Local management UI** — TUI or web UI for token management, key-mapping
   editor, and event logs
