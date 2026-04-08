@@ -301,6 +301,55 @@ binary that runs natively on the Pi's ARM64 CPU.
 
 ---
 
+## Deployment strategy — hybrid host + Docker
+
+Not all components can (or should) be containerized.  The project uses a
+**hybrid approach**: hardware-coupled services run directly on the host, while
+application-level services run in Docker for easy updates and isolation.
+
+### What runs on the host
+
+| Component         | Reason                                        |
+|-------------------|-----------------------------------------------|
+| USB gadget setup  | Writes to `/sys/kernel/config/` (kernel ConfigFS) — requires raw sysfs access that even `--privileged` containers handle poorly. |
+| Keyboard daemon   | Reads `/dev/input/eventX` (evdev) and writes `/dev/hidg0` (USB HID). Latency-critical path — every extra layer adds keystroke lag. Direct host execution keeps the pipeline under 1 ms. |
+
+These two components are small, statically-linked binaries (or shell scripts)
+with no runtime dependencies, so containerizing them provides no practical
+benefit — and risks hardware access issues.
+
+### What runs in Docker
+
+| Component              | Image                                      | Reason |
+|------------------------|--------------------------------------------|--------|
+| Vaultwarden (Phase 2)  | `vaultwarden/server:latest` (ARM64 native) | Standard web service. Official Docker image with auto-updates via Watchtower. Isolates secrets backend from the host. |
+| Management UI (Phase 3)| Custom lightweight container               | Web UI can run in its own container behind a reverse proxy. |
+
+Docker Compose simplifies Vaultwarden deployment to a single
+`docker compose up -d`, and future updates are just `docker compose pull`.
+
+### Docker Compose file
+
+See [`docker-compose.yml`](../docker-compose.yml) in the repository root.
+This file is ready for Phase 2 — it defines the Vaultwarden service with
+persistent volume and a bridge network the keyboard daemon can reach over
+`localhost:8080`.
+
+### Why not Docker for everything?
+
+The keyboard daemon must react to every keystroke in real-time.  Docker adds:
+- An extra network namespace hop for the Vaultwarden API calls (only affects
+  OTP lookups — acceptable latency for Phase 2).
+- Device passthrough complexity (`--device` or `--privileged`) for evdev and
+  hidg0.
+- No meaningful isolation benefit — the daemon already runs as a single
+  sandboxed binary with no network listeners.
+
+The hybrid split gives us Docker's update/isolation benefits for Vaultwarden
+while keeping the latency-critical keyboard path on bare metal.
+
+---
+
 ## Deployment
 
 See [`docs/setup.md`](setup.md) for step-by-step instructions.

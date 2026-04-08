@@ -28,7 +28,10 @@ and event-processing layer. Secrets never leave the device.
 
 - **Vaultwarden integration** — self-hosted Bitwarden-compatible server as the
   central backend for all secrets: OTP seeds, FIDO2/WebAuthn keys, credentials,
-  with a built-in management web vault
+  with a built-in management web vault (runs in Docker for easy updates)
+- **Docker-based deployment** — Vaultwarden and future services run in Docker
+  containers; keyboard daemon stays on bare metal for low latency
+  (see [`docker-compose.yml`](docker-compose.yml))
 - **Credential type-out** — press a key to type stored passwords and usernames
 - **SSH-over-USB** — auto-configured RNDIS/ECM networking with setup guide
 - **Advanced macros** — mode switching, per-app profiles, dead-man timeouts,
@@ -56,6 +59,7 @@ See [`docs/architecture.md`](docs/architecture.md) for the full roadmap.
 │       └── otp/         HOTP (RFC 4226) and TOTP (RFC 6238)
 ├── usb-gadget/          Shell scripts for USB gadget setup/teardown
 ├── scripts/             Installer and systemd unit files
+├── docker-compose.yml   Vaultwarden & future services (Phase 2+)
 └── README.md
 ```
 

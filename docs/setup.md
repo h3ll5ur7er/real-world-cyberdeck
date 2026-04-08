@@ -149,12 +149,52 @@ sudo chown root:root /etc/cyberdeck/otp.toml
 
 ---
 
-## 8 · Updating
+## 8 · (Phase 2) Install Docker and Vaultwarden
+
+Vaultwarden runs in Docker for easy deployment and updates.  The keyboard
+daemon stays on the host — see [`docs/architecture.md`](architecture.md) §
+"Deployment strategy" for the rationale.
+
+```bash
+# Install Docker (official convenience script)
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker "$USER"
+# Log out and back in for group membership to take effect.
+
+# Start Vaultwarden
+cd real-world-cyberdeck
+docker compose up -d
+
+# Open the web vault (from the Pi or via SSH tunnel)
+# http://localhost:8080
+```
+
+After first login, disable new sign-ups for security:
+
+```bash
+# In docker-compose.yml, set:
+#   SIGNUPS_ALLOWED: "false"
+docker compose up -d   # recreates with new setting
+```
+
+---
+
+## 9 · Updating
+
+### Keyboard daemon & gadget scripts
 
 ```bash
 cd real-world-cyberdeck
 git pull
 sudo bash scripts/install.sh
+```
+
+### Vaultwarden
+
+```bash
+cd real-world-cyberdeck
+docker compose pull
+docker compose up -d
 ```
 
 ---
