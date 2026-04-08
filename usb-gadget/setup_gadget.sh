@@ -67,10 +67,11 @@ ln -sf functions/hid.usb0 configs/c.1/
 # --- Function: CDC-ECM Ethernet -----------------------------------------------
 mkdir -p functions/ecm.usb0
 
-# Static MAC addresses. Change these if running multiple Pi cyberdecks on the
-# same host to avoid conflicts.
-HOST_MAC="48:6f:73:74:50:43"   # "HostPC"
-DEV_MAC="44:65:76:50:69:00"    # "DevPi\0"
+# Use locally administered unicast MACs (LAA bit set, multicast bit clear).
+# Change these if running multiple Pi cyberdecks on the same host to avoid
+# conflicts.
+HOST_MAC="4a:6f:73:74:50:43"   # Locally administered "HostPC"
+DEV_MAC="46:65:76:50:69:00"    # Locally administered "DevPi\0"
 echo "${HOST_MAC}" > functions/ecm.usb0/host_addr
 echo "${DEV_MAC}"  > functions/ecm.usb0/dev_addr
 
@@ -83,7 +84,11 @@ mkdir -p functions/mass_storage.usb0
 if [ ! -f "${STORAGE_IMG}" ]; then
     mkdir -p "$(dirname "${STORAGE_IMG}")"
     dd if=/dev/zero of="${STORAGE_IMG}" bs=1M count=64 status=none
-    mkfs.vfat "${STORAGE_IMG}" >/dev/null 2>&1 || true
+    if ! mkfs.vfat "${STORAGE_IMG}" >/dev/null 2>&1; then
+        echo "ERROR: Failed to format ${STORAGE_IMG} as FAT." >&2
+        echo "       Ensure mkfs.vfat is installed (for example via dosfstools)." >&2
+        exit 1
+    fi
 fi
 
 echo 1                > functions/mass_storage.usb0/stall

@@ -1,6 +1,6 @@
 //! Configuration loading for the cyberdeck keyboard daemon.
 //!
-//! Reads and validates the TOML-based keymap and OTP config files.
+//! Reads and deserializes the TOML-based keymap and OTP config files.
 
 use serde::Deserialize;
 use std::collections::HashMap;

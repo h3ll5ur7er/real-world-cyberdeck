@@ -56,7 +56,16 @@ mkdir -p "${DATA_DIR}"
 if [ ! -f "${DATA_DIR}/storage.img" ]; then
     echo "==> Creating 64 MiB mass-storage image..."
     dd if=/dev/zero of="${DATA_DIR}/storage.img" bs=1M count=64 status=none
-    mkfs.vfat "${DATA_DIR}/storage.img" >/dev/null 2>&1 || true
+    if ! command -v mkfs.vfat &>/dev/null; then
+        echo "ERROR: mkfs.vfat is required to format ${DATA_DIR}/storage.img but was not found." >&2
+        echo "Install dosfstools and rerun this installer." >&2
+        exit 1
+    fi
+    if ! mkfs.vfat "${DATA_DIR}/storage.img" >/dev/null 2>&1; then
+        echo "ERROR: Failed to format ${DATA_DIR}/storage.img with mkfs.vfat." >&2
+        echo "Ensure dosfstools is installed and try again." >&2
+        exit 1
+    fi
 fi
 
 # ── 7. Install systemd units ────────────────────────────────────────

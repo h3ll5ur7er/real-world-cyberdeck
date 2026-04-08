@@ -19,6 +19,13 @@ type HmacSha1 = Hmac<Sha1>;
 /// # Returns
 /// The OTP code as a zero-padded decimal string.
 pub fn generate_hotp(secret_b32: &str, counter: u64, digits: u32) -> Result<String, String> {
+    if !(1..=9).contains(&digits) {
+        return Err(format!(
+            "digits must be between 1 and 9 (got {}); RFC 4226 recommends 6 or 8",
+            digits
+        ));
+    }
+
     let secret = BASE32_NOPAD
         .decode(secret_b32.as_bytes())
         .map_err(|e| format!("Invalid base-32 secret: {}", e))?;
@@ -77,6 +84,18 @@ mod tests {
     #[test]
     fn test_invalid_secret() {
         let result = generate_hotp("!!!invalid!!!", 0, 6);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_digits_zero() {
+        let result = generate_hotp(SECRET_B32, 0, 0);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_digits_too_large() {
+        let result = generate_hotp(SECRET_B32, 0, 10);
         assert!(result.is_err());
     }
 }

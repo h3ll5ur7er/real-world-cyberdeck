@@ -28,6 +28,12 @@ pub fn generate_totp(
     if period == 0 {
         return Err("TOTP period must be > 0".to_string());
     }
+    if !(1..=9).contains(&digits) {
+        return Err(format!(
+            "digits must be between 1 and 9 (got {}); RFC 6238 recommends 6 or 8",
+            digits
+        ));
+    }
     let counter = time / period;
 
     let secret = BASE32_NOPAD
@@ -115,6 +121,18 @@ mod tests {
     #[test]
     fn test_totp_zero_period() {
         let result = generate_totp(SECRET_SHA1_B32, 59, 0, 6, "SHA1");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_totp_invalid_digits_zero() {
+        let result = generate_totp(SECRET_SHA1_B32, 59, 30, 0, "SHA1");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_totp_invalid_digits_too_large() {
+        let result = generate_totp(SECRET_SHA1_B32, 59, 30, 10, "SHA1");
         assert!(result.is_err());
     }
 }

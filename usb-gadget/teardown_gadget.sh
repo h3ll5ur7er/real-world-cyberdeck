@@ -22,17 +22,21 @@ for link in configs/c.1/*.usb0; do
     [ -L "${link}" ] && rm -f "${link}"
 done
 
-# Remove configuration strings and directory
+# Remove configuration strings and directories
 rm -rf configs/c.1/strings/0x409
+rmdir configs/c.1/strings 2>/dev/null || true
 rmdir configs/c.1 2>/dev/null || true
+rmdir configs 2>/dev/null || true
 
 # Remove functions
 for func_dir in functions/*/; do
     [ -d "${func_dir}" ] && rmdir "${func_dir}" 2>/dev/null || true
 done
+rmdir functions 2>/dev/null || true
 
 # Remove gadget strings and directory
 rm -rf strings/0x409
+rmdir strings 2>/dev/null || true
 cd /
 rmdir "${GADGET_DIR}" 2>/dev/null || true
 

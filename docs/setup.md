@@ -82,7 +82,7 @@ Bus 001 Device 042: ID 1d6b:0104 Linux Foundation Multifunction Composite Gadget
 
 The host will register:
 - A HID keyboard device.
-- A CDC-ECM ethernet adapter (typically `usb0` / `RNDIS` on Windows).
+- A CDC-ECM ethernet adapter (typically `usb0` on Linux/macOS hosts).
 - A USB mass storage device (backed by `/var/lib/cyberdeck/storage.img`).
 
 ---
