@@ -1,0 +1,23 @@
+# Cyberdeck OTP profile configuration
+#
+# Each [[profiles]] entry defines a TOTP or HOTP secret.
+# Secrets must be base-32 encoded (no padding).
+#
+# ⚠ Keep this file secure: chmod 600, owned by root.
+
+# Example TOTP profile:
+# [[profiles]]
+# name   = "github"
+# type   = "totp"
+# secret = "JBSWY3DPEHPK3PXP"
+# digits = 6
+# period = 30
+# algo   = "SHA1"
+
+# Example HOTP profile:
+# [[profiles]]
+# name    = "vpn"
+# type    = "hotp"
+# secret  = "JBSWY3DPEHPK3PXP"
+# digits  = 6
+# counter = 0

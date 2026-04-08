@@ -1,0 +1,40 @@
+# docker-compose.yml – Containerized services for the real-world-cyberdeck.
+#
+# Phase 2: Vaultwarden (self-hosted Bitwarden-compatible server) provides the
+# central secrets backend — OTP seeds, FIDO2 keys, credentials, and a
+# management web vault.
+#
+# The keyboard daemon and USB gadget run directly on the host (not in Docker)
+# because they need low-latency access to /dev/input/eventX and /dev/hidg0.
+# See docs/architecture.md § "Deployment strategy" for the rationale.
+#
+# Usage:
+#   docker compose up -d          # start Vaultwarden
+#   docker compose pull && docker compose up -d   # update
+#   docker compose logs -f        # view logs
+#   docker compose down           # stop
+
+services:
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: cyberdeck-vaultwarden
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"     # web vault + API — localhost only
+    volumes:
+      - vaultwarden-data:/data   # persistent encrypted vault storage
+    environment:
+      # Sign-ups are disabled by default. To create your initial account:
+      #   1. Change to "true" and run: docker compose up -d
+      #   2. Open http://localhost:8080 and register
+      #   3. Change back to "false" and run: docker compose up -d
+      SIGNUPS_ALLOWED: "false"
+      # Disable public access — vault is only accessible from the Pi itself
+      # or via SSH tunnel / USB network.
+      DOMAIN: "http://localhost:8080"
+      # Log level (change to "info" or "debug" for troubleshooting).
+      LOG_LEVEL: "warn"
+
+volumes:
+  vaultwarden-data:
+    driver: local

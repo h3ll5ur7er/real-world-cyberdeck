@@ -1,0 +1,13 @@
+[Unit]
+Description=Cyberdeck Keyboard Daemon
+After=usb-gadget.service
+Requires=usb-gadget.service
+
+[Service]
+Type=simple
+ExecStart=/opt/cyberdeck/bin/cyberdeck-kbd --config /etc/cyberdeck/keymap.toml
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
