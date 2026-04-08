@@ -177,17 +177,22 @@ counter = 0
 |-----------------|----------|------------------------------------------------------|
 | USB gadget      | Shell    | Direct sysfs/configfs manipulation, no runtime deps  |
 | Keyboard daemon | Rust     | Low-latency, memory-safe, excellent evdev/HID crates |
-| OTP engine      | Rust     | Co-located with daemon, no additional runtime        |
-| Future: FIDO2   | Rust     | Extend with `ctap2` / WebAuthn crate                 |
-| Future: UI      | TBD      | Local web UI or TUI (see roadmap)                    |
+| OTP engine      | Rust     | Co-located with daemon; will migrate to password manager backend |
+| Future: secrets | PM       | Open-source password manager for OTP, FIDO, credentials, web UI |
 
 ---
 
 ## Security principles
 
-- **Secrets never leave the Pi.** OTP seeds are stored on-device, protected
-  by file permissions. Future integration with an open-source password manager
-  (e.g. Passwork) will add encrypted at-rest storage.
+- **Secrets never leave the Pi.** All secrets (OTP seeds, credentials, FIDO
+  keys) are stored on-device. The project will integrate an open-source
+  password manager (e.g. Vaultwarden/Bitwarden, KeePassXC, or Passwork) as the
+  single, battle-proven backend for secrets management — providing encrypted
+  at-rest storage, HOTP/TOTP generation, FIDO/WebAuthn credential storage,
+  and a management web UI out of the box.
+- **No custom crypto for secrets.** Instead of rolling our own vault, we
+  delegate to a proven open-source password manager for all secrets-related
+  functionality.
 - **OTP codes are generated locally** and typed as synthetic keystrokes — they
   are never transmitted over a network.
 - **No mass-storage exposure of secrets.** The shared USB disk image is
@@ -214,15 +219,33 @@ Completed.
 | systemd services               | ✅ Done |
 | Install script                 | ✅ Done |
 
-### Phase 2 — Secure secrets & HOTP counter
+### Phase 2 — Open-source password manager integration
+
+Integrate an open-source password manager as the central secrets backend.
+The right choice (e.g. Vaultwarden/Bitwarden, KeePassXC, or Passwork) gives
+us battle-proven, encrypted storage for OTP seeds, credentials, and FIDO keys
+— plus a management web UI — without rolling our own crypto.
 
 | Feature                                           | Status  |
 |---------------------------------------------------|---------|
-| Automatic HOTP counter increment + persistence    | Planned |
-| Integrate open-source password manager (e.g. Passwork) for seed storage | Planned |
+| Evaluate & select open-source password manager    | Planned |
+| Integrate OTP generation (HOTP/TOTP) from password manager | Planned |
+| Migrate seed storage from flat TOML to password manager vault | Planned |
+| Credential / password storage & type-out          | Planned |
+| FIDO2 / WebAuthn credential storage via password manager | Planned |
 | Physical or shortcut-based trigger authorization   | Planned |
+| Automatic HOTP counter increment + persistence    | Planned |
 
-### Phase 3 — USB networking & mass storage workflows
+### Phase 3 — Management UI (via password manager)
+
+| Feature                                                | Status  |
+|--------------------------------------------------------|---------|
+| Password manager web UI for token/credential management | Planned |
+| Key-mapping editor (lightweight custom UI or extension) | Planned |
+| Event log viewer                                       | Planned |
+| USB gadget settings panel                              | Planned |
+
+### Phase 4 — USB networking & mass storage workflows
 
 | Feature                                          | Status  |
 |--------------------------------------------------|---------|
@@ -231,24 +254,7 @@ Completed.
 | Mass storage file-sharing workflow & docs        | Planned |
 | Secure admin channel over the RNDIS link         | Planned |
 
-### Phase 4 — FIDO2 / WebAuthn
-
-| Feature                                    | Status  |
-|--------------------------------------------|---------|
-| CTAP2 / FIDO-U2F integration              | Planned |
-| WebAuthn credential storage on-device      | Planned |
-
-### Phase 5 — Local management UI
-
-| Feature                                   | Status  |
-|-------------------------------------------|---------|
-| Token management (add/edit/delete OTP profiles) | Planned |
-| Key-mapping editor                        | Planned |
-| Event log viewer                          | Planned |
-| USB gadget settings panel                 | Planned |
-| Implementation: TUI (`ratatui`) or local web UI | TBD |
-
-### Phase 6 — Advanced keyboard features
+### Phase 5 — Advanced keyboard features
 
 | Feature                                   | Status  |
 |-------------------------------------------|---------|

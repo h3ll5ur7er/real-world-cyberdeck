@@ -24,11 +24,10 @@ and event-processing layer. Secrets never leave the device.
 
 ### Planned
 
-- **Password manager integration** — integrate an open-source password manager
-  (e.g. Passwork) for encrypted OTP seed storage
-- **FIDO2 / WebAuthn** — hardware security key functionality via CTAP2
-- **Local management UI** — TUI or web UI for token management, key-mapping
-  editor, and event logs
+- **Open-source password manager integration** — integrate a battle-proven
+  password manager (e.g. Vaultwarden, KeePassXC, or Passwork) for all secrets:
+  OTP seeds, credentials, FIDO2/WebAuthn keys, with a management web UI
+- **Credential type-out** — press a key to type stored passwords and usernames
 - **SSH-over-USB** — auto-configured RNDIS/ECM networking with setup guide
 - **Advanced macros** — mode switching, per-app profiles, dead-man timeouts,
   LED/on-screen status indicators
