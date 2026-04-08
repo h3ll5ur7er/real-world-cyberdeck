@@ -5,6 +5,12 @@
 
 set -euo pipefail
 
+if [ "${EUID:-$(id -u)}" -ne 0 ]; then
+    echo "ERROR: This installer must be run as root." >&2
+    echo "Re-run with sudo or as the root user." >&2
+    exit 1
+fi
+
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 INSTALL_DIR="/opt/cyberdeck"
 CONFIG_DIR="/etc/cyberdeck"

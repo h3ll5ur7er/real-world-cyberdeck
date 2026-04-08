@@ -10,7 +10,7 @@ the Pi presents itself as a composite USB device providing:
    (macros, OTP codes, automation shortcuts).
 2. **USB mass storage** — exposes a small virtual disk for easy file transfer
    between the Pi and the host.
-3. **USB network interface (RNDIS/ECM)** — provides SSH-over-USB so the user
+3. **USB network interface (CDC-ECM)** — provides SSH-over-USB so the user
    can manage the Pi without an external network.
 
 Secrets never leave the Pi. OTP seeds are stored on-device and synthetic

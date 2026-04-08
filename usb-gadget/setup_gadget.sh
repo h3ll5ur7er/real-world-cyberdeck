@@ -12,7 +12,7 @@ set -euo pipefail
 
 GADGET_DIR="/sys/kernel/config/usb_gadget/cyberdeck"
 STORAGE_IMG="/var/lib/cyberdeck/storage.img"
-UDC=$(ls /sys/class/udc 2>/dev/null | head -n1)
+UDC=$(ls /sys/class/udc 2>/dev/null | head -n1 || true)
 
 if [ -z "${UDC}" ]; then
     echo "ERROR: No UDC (USB Device Controller) found." >&2
