@@ -17,6 +17,20 @@ Secrets never leave the Pi. OTP seeds are stored on-device and synthetic
 keystrokes are generated locally through a custom interception and
 event-processing layer.
 
+### Keyboard interception model
+
+The Pi 500+'s built-in keyboard is connected internally over USB and appears
+as a standard evdev input device.  The daemon opens this device and
+immediately issues an `EVIOCGRAB` ioctl to **exclusively** claim it.  After
+the grab, keystrokes are delivered *only* to the daemon — the Pi's local
+TTY/desktop never sees them.  The daemon then forwards (and optionally
+remaps, expands, or replaces) each keystroke to the USB HID gadget device
+(`/dev/hidg0`), so the host computer receives the input.
+
+This is critical for correct operation: without `EVIOCGRAB` every keystroke
+would reach both the host and the Pi's own console, causing unintended
+side-effects on the Pi.
+
 ---
 
 ## System diagram
@@ -35,14 +49,14 @@ event-processing layer.
 │  │  (kernel   │◄──│  Daemon (Rust) │◄─│  (Rust)     │  │
 │  │  ConfigFS) │   │                │  └─────────────┘  │
 │  └────────────┘   │  evdev ──────► │                    │
-│       ▲           │  keymapper ──► │  ┌─────────────┐  │
-│       │           │  HID writer ─► │  │ Future:     │  │
-│  ┌────┴───────┐   └────────────────┘  │  FIDO2      │  │
-│  │ ECM net    │                       │  Secure UI  │  │
-│  │ Mass store │                       │  Seed vault │  │
+│       ▲           │  EVIOCGRAB ──► │  ┌─────────────┐  │
+│       │           │  keymapper ──► │  │ Future:     │  │
+│  ┌────┴───────┐   │  HID writer ─► │  │ Vaultwarden │  │
+│  │ ECM net    │   └────────────────┘  │ FIDO2       │  │
+│  │ Mass store │                       │ Web vault   │  │
 │  └────────────┘                       └─────────────┘  │
 │                                                         │
-│  Physical keyboard (built-in to Pi 500+)                │
+│  Physical keyboard (built-in, internally USB-connected) │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -99,7 +113,7 @@ keyboard-daemon/
 
 ---
 
-### 3 · OTP Engine (`keyboard-daemon/src/otp/`)
+### 3 · OTP Engine (`keyboard-daemon/src/otp/`) — *Phase 1 placeholder*
 
 | Algorithm | RFC  | Key type          | Counter          |
 |-----------|------|-------------------|------------------|
@@ -108,6 +122,11 @@ keyboard-daemon/
 
 OTP codes are typed out as if they were normal keyboard input – the daemon
 breaks the numeric string into individual key-press/release HID reports.
+
+> **Phase 2 transition:** The built-in OTP engine is a minimal Phase 1
+> implementation.  In Phase 2 the daemon will retrieve OTP codes (and other
+> secrets) from Vaultwarden via its REST API, making the built-in OTP module
+> an offline fallback only.
 
 ---
 
@@ -119,6 +138,8 @@ Physical key press
         ▼
 evdev event  (/dev/input/eventX)
         │
+        │  ← EVIOCGRAB: events go ONLY to daemon,
+        │    not to Pi's local console
         ▼
 KeyMapper::translate()
     ├─ key → key   ──► single HID key report
@@ -177,22 +198,26 @@ counter = 0
 |-----------------|----------|------------------------------------------------------|
 | USB gadget      | Shell    | Direct sysfs/configfs manipulation, no runtime deps  |
 | Keyboard daemon | Rust     | Low-latency, memory-safe, excellent evdev/HID crates |
-| OTP engine      | Rust     | Co-located with daemon; will migrate to password manager backend |
-| Future: secrets | PM       | Open-source password manager for OTP, FIDO, credentials, web UI |
+| OTP engine      | Rust     | Phase 1 standalone; Phase 2 delegates to Vaultwarden |
+| Future: secrets | Vaultwarden | Self-hosted Bitwarden server — OTP, FIDO, credentials, web UI |
 
 ---
 
 ## Security principles
 
 - **Secrets never leave the Pi.** All secrets (OTP seeds, credentials, FIDO
-  keys) are stored on-device. The project will integrate an open-source
-  password manager (e.g. Vaultwarden/Bitwarden, KeePassXC, or Passwork) as the
-  single, battle-proven backend for secrets management — providing encrypted
-  at-rest storage, HOTP/TOTP generation, FIDO/WebAuthn credential storage,
-  and a management web UI out of the box.
+  keys) are stored on-device.  Phase 2 will integrate
+  **[Vaultwarden](https://github.com/dani-garcia/vaultwarden)** — a
+  lightweight, self-hosted Bitwarden-compatible server written in Rust — as
+  the single secrets backend.  Vaultwarden provides encrypted at-rest storage,
+  TOTP generation, FIDO2/WebAuthn credential storage, and a full management
+  web vault, all on the Pi itself.
 - **No custom crypto for secrets.** Instead of rolling our own vault, we
-  delegate to a proven open-source password manager for all secrets-related
-  functionality.
+  delegate to Vaultwarden — a widely-deployed, battle-proven, open-source
+  implementation of the Bitwarden protocol.
+- **Exclusive keyboard grab.** The daemon issues `EVIOCGRAB` on the evdev
+  device so keystrokes reach *only* the USB HID gadget — they never leak to
+  the Pi's local console.
 - **OTP codes are generated locally** and typed as synthetic keystrokes — they
   are never transmitted over a network.
 - **No mass-storage exposure of secrets.** The shared USB disk image is
@@ -219,28 +244,38 @@ Completed.
 | systemd services               | ✅ Done |
 | Install script                 | ✅ Done |
 
-### Phase 2 — Open-source password manager integration
+### Phase 2 — Vaultwarden integration (secrets backend)
 
-Integrate an open-source password manager as the central secrets backend.
-The right choice (e.g. Vaultwarden/Bitwarden, KeePassXC, or Passwork) gives
-us battle-proven, encrypted storage for OTP seeds, credentials, and FIDO keys
-— plus a management web UI — without rolling our own crypto.
+Integrate **[Vaultwarden](https://github.com/dani-garcia/vaultwarden)** as
+the central secrets backend.  Vaultwarden was selected over other candidates
+after evaluating fit for the Pi 500+ use case:
+
+| Candidate     | Pros                                         | Cons                                  |
+|---------------|----------------------------------------------|---------------------------------------|
+| **Vaultwarden** ✅ | Rust binary, tiny footprint, ARM64 native. Full Bitwarden API: TOTP, FIDO2, credentials, web vault. Active community, widely deployed. | Requires ~50 MB RAM at idle. |
+| KeePassXC     | Mature, offline-first.                       | Desktop app only — no server, no web UI, no API for daemon integration. |
+| Passwork      | Web UI, self-hosted.                         | PHP stack, heavier dependencies, commercial licensing. |
+| pass (Unix)   | Ultra-lightweight, GPG-based.                | CLI only, no web UI, no native FIDO2 or HOTP. |
+
+Vaultwarden gives us TOTP/HOTP, FIDO2/WebAuthn, credential storage, and a
+management web vault — all battle-proven and encrypted — from a single Rust
+binary that runs natively on the Pi's ARM64 CPU.
 
 | Feature                                           | Status  |
 |---------------------------------------------------|---------|
-| Evaluate & select open-source password manager    | Planned |
-| Integrate OTP generation (HOTP/TOTP) from password manager | Planned |
-| Migrate seed storage from flat TOML to password manager vault | Planned |
-| Credential / password storage & type-out          | Planned |
-| FIDO2 / WebAuthn credential storage via password manager | Planned |
+| Install & configure Vaultwarden on the Pi         | Planned |
+| Daemon → Vaultwarden REST API integration for OTP | Planned |
+| Credential / password storage & type-out via API  | Planned |
+| FIDO2 / WebAuthn credential storage               | Planned |
+| Migrate seed storage from flat TOML to vault      | Planned |
 | Physical or shortcut-based trigger authorization   | Planned |
 | Automatic HOTP counter increment + persistence    | Planned |
 
-### Phase 3 — Management UI (via password manager)
+### Phase 3 — Management UI (via Vaultwarden web vault)
 
 | Feature                                                | Status  |
 |--------------------------------------------------------|---------|
-| Password manager web UI for token/credential management | Planned |
+| Vaultwarden web vault for token/credential management  | Planned |
 | Key-mapping editor (lightweight custom UI or extension) | Planned |
 | Event log viewer                                       | Planned |
 | USB gadget settings panel                              | Planned |

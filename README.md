@@ -13,6 +13,8 @@ and event-processing layer. Secrets never leave the device.
 
 - **USB composite device** via Linux ConfigFS gadget (HID keyboard, CDC-ECM
   Ethernet, mass storage)
+- **Exclusive keyboard grab** (`EVIOCGRAB`) — keystrokes reach only the USB
+  HID gadget, never the Pi's local console
 - **Key remapping** — remap any key to another key, a macro sequence, or a
   special function
 - **OTP type-out** — press a key to type a TOTP or HOTP code directly as
@@ -24,9 +26,9 @@ and event-processing layer. Secrets never leave the device.
 
 ### Planned
 
-- **Open-source password manager integration** — integrate a battle-proven
-  password manager (e.g. Vaultwarden, KeePassXC, or Passwork) for all secrets:
-  OTP seeds, credentials, FIDO2/WebAuthn keys, with a management web UI
+- **Vaultwarden integration** — self-hosted Bitwarden-compatible server as the
+  central backend for all secrets: OTP seeds, FIDO2/WebAuthn keys, credentials,
+  with a built-in management web vault
 - **Credential type-out** — press a key to type stored passwords and usernames
 - **SSH-over-USB** — auto-configured RNDIS/ECM networking with setup guide
 - **Advanced macros** — mode switching, per-app profiles, dead-man timeouts,

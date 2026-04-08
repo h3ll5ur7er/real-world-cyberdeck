@@ -10,9 +10,10 @@ mod keymapper;
 mod otp;
 
 use clap::Parser;
-use log::{error, info};
+use log::{error, info, warn};
 use std::fs::File;
 use std::io::Read;
+use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 use std::process;
 
@@ -36,6 +37,12 @@ const KEY_PRESS: i32 = 1;
 
 /// Key release value (linux/input-event-codes.h: value=0 means key up).
 const KEY_RELEASE: i32 = 0;
+
+/// EVIOCGRAB ioctl number: _IOW('E', 0x90, int) — exclusively grabs an input
+/// device so events are delivered only to this process.  Without this the Pi's
+/// local TTY/desktop would also receive every keystroke, which is wrong when
+/// the keyboard is being forwarded to the USB HID gadget.
+const EVIOCGRAB: libc::c_ulong = 0x40044590;
 
 fn main() {
     env_logger::init();
@@ -66,6 +73,22 @@ fn main() {
             process::exit(1);
         }
     };
+
+    // Exclusively grab the keyboard so events are delivered only to this
+    // daemon and not also to the Pi's local TTY/desktop.
+    // Safety: EVIOCGRAB is a well-defined ioctl on any evdev fd.
+    let grab_result = unsafe { libc::ioctl(evdev.as_raw_fd(), EVIOCGRAB, 1 as libc::c_int) };
+    if grab_result != 0 {
+        warn!(
+            "EVIOCGRAB failed on {} (errno {}). Keystrokes will also reach \
+             the Pi's local console — this is normally wrong when running as \
+             a USB keyboard.",
+            cfg.keyboard_device,
+            std::io::Error::last_os_error()
+        );
+    } else {
+        info!("Exclusively grabbed {}", cfg.keyboard_device);
+    }
 
     // Open HID gadget device.
     let mut hid_writer = match hid::HidWriter::open(&cfg.hid_device) {

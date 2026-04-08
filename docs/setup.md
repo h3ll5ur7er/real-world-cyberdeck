@@ -15,8 +15,17 @@
 
 1. Flash the latest **Raspberry Pi OS Lite (64-bit)** to the SD card with
    Raspberry Pi Imager.
-2. Enable SSH and set credentials via the Imager advanced options.
+2. **Enable SSH and set credentials** via the Imager's *OS Customisation*
+   dialog (click the gear icon).  Setting hostname, SSH, and Wi-Fi here lets
+   you boot the Pi headless — no monitor or extra keyboard needed.
 3. Boot the Pi and connect via SSH.
+
+> **Tip — Raspberry Pi Imager advantage:** The Imager pre-configures SSH,
+> Wi-Fi, hostname, and locale in a single step during flashing.  This means
+> you can plug the Pi 500+ into the host, SSH in over Wi-Fi, and run the
+> installer without ever needing to edit `/boot/firmware/config.txt` manually
+> for initial access.  The only manual `config.txt` change required is
+> enabling the dwc2 overlay (step 2 below).
 
 ---
 
@@ -82,6 +91,31 @@ The host will register:
 
 Edit `/etc/cyberdeck/keymap.toml` – see
 [`docs/key-remapping.md`](key-remapping.md) for the full reference.
+
+### Finding the correct keyboard device path
+
+The Pi 500+'s built-in keyboard is connected internally over USB.  The evdev
+device name varies by firmware version.  To discover it:
+
+```bash
+# List all input devices
+cat /proc/bus/input/devices
+
+# Or list by-id symlinks (stable across reboots)
+ls -l /dev/input/by-id/
+
+# Or use evtest (install with: sudo apt install evtest)
+sudo evtest
+```
+
+Set `keyboard_device` in `keymap.toml` to the correct path.  Prefer
+`/dev/input/by-id/…` or `/dev/input/by-path/…` symlinks — they are stable
+across reboots, unlike `/dev/input/eventN` which can change.
+
+> **Important:** The daemon calls `EVIOCGRAB` to exclusively grab the
+> keyboard.  Once running, keystrokes go *only* to the USB HID gadget — the
+> Pi's local console will not receive them.  If you need local console access,
+> stop the daemon first: `sudo systemctl stop keyboard-daemon`
 
 Restart the daemon after editing:
 

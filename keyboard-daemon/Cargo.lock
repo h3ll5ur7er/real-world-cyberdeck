@@ -161,6 +161,7 @@ dependencies = [
  "data-encoding",
  "env_logger",
  "hmac",
+ "libc",
  "log",
  "serde",
  "sha1",

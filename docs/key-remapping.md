@@ -3,6 +3,11 @@
 The keyboard daemon reads `/etc/cyberdeck/keymap.toml` (or the path supplied
 via `--config`) at startup. Changes take effect on the next daemon restart.
 
+> **Note:** The daemon exclusively grabs the keyboard device (`EVIOCGRAB`).
+> While running, keystrokes are forwarded *only* to the USB HID gadget — the
+> Pi's local console does not receive them.  Stop the daemon
+> (`sudo systemctl stop keyboard-daemon`) to restore local keyboard access.
+
 ---
 
 ## File structure
